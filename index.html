@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>部分工時假期計算器（多人版）</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; line-height: 1.6; }
+    h2 { margin-top: 40px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    pre { background: #f7f7f7; padding: 15px; }
+    button { padding: 10px 15px; cursor: pointer; margin-top: 10px; }
+    select, input { width: 100%; }
+  </style>
+</head>
+<body>
+  <h1>部分工時假期計算器（多人版）</h1>
+  <p>一次輸入 5 個人，計算各自的假期時數與薪資</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>姓名</th>
+        <th>假別</th>
+        <th>子假別</th>
+        <th>年資(月)</th>
+        <th>全年實際工時</th>
+        <th>平均週工時</th>
+        <th>時薪</th>
+        <th>當日班表工時</th>
+      </tr>
+    </thead>
+    <tbody id="inputRows">
+      <!-- 自動產生 5 行 -->
+    </tbody>
+  </table>
+
+  <button onclick="calcAll()">計算</button>
+  <pre id="result"></pre>
+
+  <script>
+    const leaveOptions = `
+      <option value="annual">特休假</option>
+      <option value="other">婚喪病事產檢陪產</option>
+      <option value="maternity">產假</option>
+      <option value="menstrual">生理假</option>`;
+
+    const subLeaveOptions = `
+      <option value="marriage">婚假 (8天，全薪)</option>
+      <option value="funeral8">喪假 (8天，全薪)</option>
+      <option value="funeral6">喪假 (6天，全薪)</option>
+      <option value="funeral3">喪假 (3天，全薪)</option>
+      <option value="personal">事假 (14天，無薪)</option>
+      <option value="sick">病假 (30天，半薪)</option>
+      <option value="prenatal">產檢假 (5天，全薪)</option>
+      <option value="paternity">陪產假 (7天，全薪)</option>`;
+
+    function getBaseAnnualDays(months) {
+      if (months < 6) return 0;
+      if (months < 12) return 3;
+      if (months < 24) return 7;
+      if (months < 36) return 10;
+      if (months < 60) return 14;
+      if (months < 120) return 15;
+      if (months < 180) return 16;
+      if (months < 240) return 17;
+      return 30;
+    }
+
+    function getLeaveInfo(subType) {
+      switch (subType) {
+        case "marriage": return { days: 8, payType: "full" };
+        case "funeral8": return { days: 8, payType: "full" };
+        case "funeral6": return { days: 6, payType: "full" };
+        case "funeral3": return { days: 3, payType: "full" };
+        case "personal": return { days: 14, payType: "none" };
+        case "sick": return { days: 30, payType: "half" };
+        case "prenatal": return { days: 5, payType: "full" };
+        case "paternity": return { days: 7, payType: "full" };
+        default: return { days: 0, payType: "none" };
+      }
+    }
+
+    function calcRow(data) {
+      const { name, leaveType, subLeaveType, months, workedYear, fullYear, avgWeek, wage, n } = data;
+
+      let N = 0;
+      let pay = 0;
+      let baseDays = getBaseAnnualDays(months);
+      let leaveInfo = getLeaveInfo(subLeaveType);
+
+      if (leaveType === "annual") {
+        N = (workedYear / fullYear) * (baseDays * 8);
+        pay = wage * N;
+      }
+
+      if (leaveType === "other") {
+        N = (avgWeek / 40) * (leaveInfo.days * 8);
+        if (leaveInfo.payType === "full") {
+          pay = wage * n;
+        } else if (leaveInfo.payType === "half") {
+          pay = wage * n * 0.5;
+        } else {
+          pay = 0;
+        }
+      }
+
+      if (leaveType === "maternity") {
+        N = avgWeek * 8 * 8;
+        if (months < 6) {
+          pay = wage * n * 0.5;
+        } else {
+          pay = wage * n;
+        }
+      }
+
+      if (leaveType === "menstrual") {
+        N = n;
+        pay = wage * n * 0.5;
+      }
+
+      return {
+        name,
+        N: N.toFixed(2),
+        n,
+        pay: pay.toFixed(2),
+        leave: leaveType,
+        subLeave: subLeaveType,
+        leaveInfo
+      };
+    }
+
+    function calcAll() {
+      let rows = document.querySelectorAll("#inputRows tr");
+      let results = [];
+
+      rows.forEach(row => {
+        const inputs = row.querySelectorAll("input, select");
+        const data = {
+          name: inputs[0].value,
+          leaveType: inputs[1].value,
+          subLeaveType: inputs[2].value,
+          months: parseFloat(inputs[3].value) || 0,
+          workedYear: parseFloat(inputs[4].value) || 0,
+          fullYear: 2088,
+          avgWeek: parseFloat(inputs[5].value) || 0,
+          wage: parseFloat(inputs[6].value) || 0,
+          n: parseFloat(inputs[7].value) || 0
+        };
+        results.push(calcRow(data));
+      });
+
+      let output = results.map(r =>
+        `【${r.name || "未填姓名"}】\n假別: ${r.leave} ${r.subLeave}\n應休時數 N: ${r.N} 小時\n實際工時 n: ${r.n} 小時\n估算薪資: ${r.pay} 元\n${r.leave === "other" ? `(天數: ${r.leaveInfo.days}, 薪資規則: ${r.leaveInfo.payType})` : ""}`
+      ).join("\n\n");
+
+      document.getElementById("result").innerText = output;
+    }
+
+    // 產生 5 行輸入框
+    function initRows() {
+      let tbody = document.getElementById("inputRows");
+      for (let i = 0; i < 5; i++) {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input type="text" placeholder="姓名"></td>
+          <td><select>${leaveOptions}</select></td>
+          <td><select>${subLeaveOptions}</select></td>
+          <td><input type="number"></td>
+          <td><input type="number"></td>
+          <td><input type="number"></td>
+          <td><input type="number"></td>
+          <td><input type="number"></td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    initRows();
+  </script>
+</body>
+</html>
