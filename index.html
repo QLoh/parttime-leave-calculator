@@ -5,59 +5,70 @@
   <title>部分工時假期計算器</title>
   <style>
     body {
-      font-family: "Helvetica Neue", Arial, sans-serif;
-      margin: 20px;
-      background-color: #f9fafb;
-      color: #333;
+      font-family: "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+      background-color: #f5f5f5;
+      color: #2d2d2d;
       line-height: 1.6;
     }
     h1 {
       font-size: 26px;
-      margin-bottom: 20px;
-      color: #0d47a1;
-    }
-    h2 {
-      font-size: 20px;
-      margin-top: 20px;
-      color: #1565c0;
+      text-align: center;
+      color: #1f2937;
+      margin-bottom: 25px;
+      font-weight: 600;
     }
     .box {
       background: #fff;
-      padding: 20px;
-      margin: 15px 0;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 25px;
+      margin: 20px auto;
+      border-radius: 10px;
+      border: 1px solid #e0e0e0;
+      max-width: 600px;
     }
-    label {
-      display: block;
-      margin: 8px 0 4px;
+    h2 {
+      font-size: 18px;
+      color: #374151;
+      margin-bottom: 15px;
       font-weight: 600;
     }
-    input, select {
+    label {
+      display: flex;
+      align-items: center;
+      margin: 6px 0;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      accent-color: #4b5563;
+      cursor: pointer;
+    }
+    input[type="number"], input[type="date"], select {
       padding: 6px;
       border: 1px solid #ccc;
       border-radius: 4px;
       width: 200px;
+      margin: 5px 0;
     }
     button {
-      margin-top: 15px;
-      padding: 10px 20px;
+      margin-top: 20px;
+      width: 100%;
+      padding: 10px;
       border: none;
       border-radius: 6px;
-      background-color: #1976d2;
-      color: #fff;
       font-size: 15px;
+      background-color: #4b5563;
+      color: #fff;
+      font-weight: 500;
       cursor: pointer;
+      transition: background-color 0.2s ease;
     }
-    button:hover {
-      background-color: #0d47a1;
-    }
-    .result {
-      font-size: 16px;
-      margin-top: 10px;
-    }
+    button:hover { background-color: #374151; }
+    .result { font-size: 16px; margin-top: 10px; }
     .formula {
-      background: #eef4fb;
+      background: #f3f4f6;
       padding: 12px;
       margin-top: 20px;
       border-radius: 6px;
@@ -76,140 +87,195 @@
 </head>
 <body>
 
-  <h1>部分工時假期計算器</h1>
+<h1>部分工時假期計算器</h1>
 
-  <!-- Step 1 -->
-  <div id="step1" class="box">
-    <h2>Step 1：選擇要計算的假別</h2>
-    <label><input type="checkbox" value="vacation"> 特休假</label>
-    <label><input type="checkbox" value="maternity"> 產假</label>
-    <label><input type="checkbox" value="menstrual"> 生理假</label>
-    <button onclick="goStep2()">下一步</button>
+<!-- Step 1 -->
+<div id="step1" class="box">
+  <h2>Step 1：選擇要計算的假別</h2>
+  <label><input type="checkbox" value="vacation"> 特休假</label>
+  <label><input type="checkbox" value="maternity"> 產假</label>
+  <label><input type="checkbox" value="marriage"> 婚假</label>
+  <label><input type="checkbox" value="funeral"> 喪假</label>
+  <label><input type="checkbox" value="sick"> 病假</label>
+  <label><input type="checkbox" value="personal"> 事假</label>
+  <label><input type="checkbox" value="prenatal"> 產檢假</label>
+  <label><input type="checkbox" value="paternity"> 陪產假</label>
+  <label><input type="checkbox" value="menstrual"> 生理假</label>
+  <button onclick="goStep2()">下一步</button>
+</div>
+
+<!-- Step 2 -->
+<div id="step2" class="box" style="display:none;">
+  <h2>Step 2：輸入必要資訊</h2>
+  <div><strong>已選假別：</strong><span id="selectedLeave"></span></div>
+
+  <h3>共用資訊</h3>
+  <label>到職日：<input type="date" id="startDate" value="2024-01-01"></label>
+  <label>平均月工時（不含加班）：<input type="number" id="monthlyHours" value="100"></label>
+  <label>平均週工時：<input type="number" id="weeklyHours" value="25"></label>
+  <label>時薪（元）：<input type="number" id="hourlyWage" value="204"></label>
+
+  <div id="maternityExtra" style="display:none;">
+    <h3>產假額外資訊</h3>
+    <label>週工時型態：
+      <select id="maternityType">
+        <option value="fixed">固定週工時</option>
+        <option value="variable">非固定週工時</option>
+      </select>
+    </label>
+    <label>前6個月總工時（僅非固定需要）：<input type="number" id="last6MonthsHours" value=""></label>
   </div>
 
-  <!-- Step 2 -->
-  <div id="step2" class="box" style="display:none;">
-    <h2>Step 2：輸入必要資訊</h2>
-    <div><strong>已選假別：</strong><span id="selectedLeave"></span></div>
-
-    <h3>共用資訊</h3>
-    <label>到職日：<input type="date" id="startDate" value="2024-01-01"></label>
-    <label>平均月工時（不含加班）：<input type="number" id="monthlyHours" value="100"></label>
-    <label>平均週工時：<input type="number" id="weeklyHours" value="25"></label>
-    <label>時薪（元）：<input type="number" id="hourlyWage" value="204"></label>
-
-    <div id="maternityExtra" style="display:none;">
-      <h3>產假額外資訊</h3>
-      <label>週工時型態：
-        <select id="maternityType">
-          <option value="fixed">固定週工時</option>
-          <option value="variable">非固定週工時</option>
-        </select>
-      </label>
-      <label>前6個月總工時（僅非固定需要）：<input type="number" id="last6MonthsHours" value=""></label>
-    </div>
-
-    <div id="menstrualExtra" style="display:none;">
-      <h3>生理假額外資訊</h3>
-      <label>當日班表時數：<input type="number" id="menstrualHours" value="8"></label>
-    </div>
-
-    <button onclick="goStep1()">上一步</button>
-    <button onclick="goStep3()">計算</button>
+  <div id="menstrualExtra" style="display:none;">
+    <h3>生理假額外資訊</h3>
+    <label>當日班表時數：<input type="number" id="menstrualHours" value="8"></label>
   </div>
 
-  <!-- Step 3 -->
-  <div id="step3" class="box" style="display:none;">
-    <h2>Step 3：計算結果</h2>
-    <div><strong>已選假別：</strong><span id="selectedLeave2"></span></div>
-    <div id="results" class="result"></div>
-    <div id="formulas" class="formula"></div>
-    <button onclick="goStep2()">返回修改</button>
-  </div>
+  <button onclick="goStep1()">上一步</button>
+  <button onclick="goStep3()">計算</button>
+</div>
 
-  <footer>
-    水山子研究室 | Email: sarraaagoole@gmail.com | 使用人次: <span id="visitorCount">0</span>
-  </footer>
+<!-- Step 3 -->
+<div id="step3" class="box" style="display:none;">
+  <h2>Step 3：計算結果</h2>
+  <div><strong>已選假別：</strong><span id="selectedLeave2"></span></div>
+  <div id="results" class="result"></div>
+  <div id="formulas" class="formula"></div>
+  <button onclick="goStep2()">返回修改</button>
+</div>
+
+<footer>
+  水山子研究室 | Email: sarraaagoole@gmail.com | 使用人次: <span id="visitorCount">0</span>
+</footer>
 
 <script>
-  let selectedLeaves = [];
+let selectedLeaves = [];
 
-  // 訪客計數
-  if (localStorage.getItem("visitorCount")) {
-    localStorage.setItem("visitorCount", Number(localStorage.getItem("visitorCount")) + 1);
-  } else {
-    localStorage.setItem("visitorCount", 1);
+// 訪客計數
+if (localStorage.getItem("visitorCount")) {
+  localStorage.setItem("visitorCount", Number(localStorage.getItem("visitorCount")) + 1);
+} else {
+  localStorage.setItem("visitorCount", 1);
+}
+document.getElementById("visitorCount").innerText = localStorage.getItem("visitorCount");
+
+function goStep1(){
+  document.getElementById("step1").style.display = "block";
+  document.getElementById("step2").style.display = "none";
+  document.getElementById("step3").style.display = "none";
+}
+
+function goStep2(){
+  selectedLeaves = Array.from(document.querySelectorAll('#step1 input[type=checkbox]:checked')).map(cb => cb.value);
+  if(selectedLeaves.length === 0){
+    alert("請至少選擇一個假別！");
+    return;
   }
-  document.getElementById("visitorCount").innerText = localStorage.getItem("visitorCount");
+  document.getElementById("selectedLeave").innerText = selectedLeaves.join("、");
+  document.getElementById("maternityExtra").style.display = selectedLeaves.includes("maternity") ? "block" : "none";
+  document.getElementById("menstrualExtra").style.display = selectedLeaves.includes("menstrual") ? "block" : "none";
+  document.getElementById("step1").style.display = "none";
+  document.getElementById("step2").style.display = "block";
+  document.getElementById("step3").style.display = "none";
+}
 
-  function goStep1(){
-    document.getElementById("step1").style.display = "block";
-    document.getElementById("step2").style.display = "none";
-    document.getElementById("step3").style.display = "none";
+function goStep3(){
+  const monthlyHours = parseFloat(document.getElementById("monthlyHours").value);
+  const weeklyHours = parseFloat(document.getElementById("weeklyHours").value);
+  const hourlyWage = parseFloat(document.getElementById("hourlyWage").value);
+  const last6MonthsHours = parseFloat(document.getElementById("last6MonthsHours").value) || 0;
+  const menstrualHours = parseFloat(document.getElementById("menstrualHours").value);
+
+  let output = "";
+  let formulas = "運算公式：\n";
+
+  // 特休
+  if(selectedLeaves.includes("vacation")){
+    const annualHours = monthlyHours * 12;
+    const vacationDays = 7; 
+    const vacationHours = (annualHours / 2088) * vacationDays * 8;
+    const vacationPay = Math.ceil(vacationHours * hourlyWage);
+    output += `特休假：${vacationDays}天 → ${vacationHours.toFixed(2)} 小時，NT$${vacationPay.toLocaleString()}<br>`;
+    formulas += "特休假時數 = (實際年工時 ÷ 2088) × 特休天數 × 8\n特休假薪資 = 特休時數 × 時薪\n\n";
   }
 
-  function goStep2(){
-    selectedLeaves = Array.from(document.querySelectorAll('#step1 input[type=checkbox]:checked')).map(cb => cb.value);
-    if(selectedLeaves.length === 0){
-      alert("請至少選擇一個假別！");
-      return;
-    }
-    document.getElementById("selectedLeave").innerText = selectedLeaves.join("、");
-    document.getElementById("maternityExtra").style.display = selectedLeaves.includes("maternity") ? "block" : "none";
-    document.getElementById("menstrualExtra").style.display = selectedLeaves.includes("menstrual") ? "block" : "none";
-    document.getElementById("step1").style.display = "none";
-    document.getElementById("step2").style.display = "block";
-    document.getElementById("step3").style.display = "none";
+  // 產假
+  if(selectedLeaves.includes("maternity")){
+    const maternityDays = 56;
+    let maternityHours = (document.getElementById("maternityType").value === "fixed") ?
+      weeklyHours * 8 : (last6MonthsHours/26) * 8;
+    const maternityPay = Math.ceil(maternityHours * hourlyWage);
+    output += `產假：${maternityDays}天 → ${maternityHours.toFixed(2)} 小時，NT$${maternityPay.toLocaleString()}<br>`;
+    formulas += "產假工時 = 固定週工時 × 8週 或 (前6月總工時 ÷ 26) × 8週\n產假薪資 = 產假工時 × 時薪（全薪/半薪依規定）\n\n";
   }
 
-  function goStep3(){
-    const monthlyHours = parseFloat(document.getElementById("monthlyHours").value);
-    const weeklyHours = parseFloat(document.getElementById("weeklyHours").value);
-    const hourlyWage = parseFloat(document.getElementById("hourlyWage").value);
-    const last6MonthsHours = parseFloat(document.getElementById("last6MonthsHours").value) || 0;
-    const menstrualHours = parseFloat(document.getElementById("menstrualHours").value);
-
-    let output = "";
-    let formulas = "運算公式：\n";
-
-    if(selectedLeaves.includes("vacation")){
-      const annualHours = monthlyHours * 12;
-      const vacationDays = 7; // 範例：7天
-      const vacationHours = (annualHours / 2088) * vacationDays * 8;
-      const vacationPay = Math.ceil(vacationHours * hourlyWage);
-      output += `特休假：${vacationDays}天 → ${vacationHours.toFixed(2)} 小時，NT$${vacationPay.toLocaleString()}<br>`;
-      formulas += "特休假時數 = (實際年工時 ÷ 2088) × 特休天數 × 8\n";
-      formulas += "特休假薪資 = 特休時數 × 時薪\n\n";
-    }
-
-    if(selectedLeaves.includes("maternity")){
-      const maternityDays = 56;
-      let maternityHours = 0;
-      if(document.getElementById("maternityType").value === "fixed"){
-        maternityHours = weeklyHours * 8;
-      } else {
-        maternityHours = (last6MonthsHours/26) * 8;
-      }
-      const maternityPay = Math.ceil(maternityHours * hourlyWage);
-      output += `產假：${maternityDays}天 → ${maternityHours.toFixed(2)} 小時，NT$${maternityPay.toLocaleString()}<br>`;
-      formulas += "產假工時 = 固定週工時 × 8週 或 (前6月總工時 ÷ 26) × 8週\n";
-      formulas += "產假薪資 = 產假工時 × 時薪（全薪/半薪依規定）\n\n";
-    }
-
-    if(selectedLeaves.includes("menstrual")){
-      const menstrualPay = Math.ceil(menstrualHours * hourlyWage * 0.5);
-      output += `生理假：1天 → ${menstrualHours.toFixed(2)} 小時，NT$${menstrualPay.toLocaleString()}（半薪）<br>`;
-      formulas += "生理假薪資 = 當日班表時數 × 時薪 × 0.5\n\n";
-    }
-
-    document.getElementById("selectedLeave2").innerText = selectedLeaves.join("、");
-    document.getElementById("results").innerHTML = output;
-    document.getElementById("formulas").innerText = formulas;
-
-    document.getElementById("step1").style.display = "none";
-    document.getElementById("step2").style.display = "none";
-    document.getElementById("step3").style.display = "block";
+  // 婚假
+  if(selectedLeaves.includes("marriage")){
+    const marriageDays = 8;
+    const marriageHours = (weeklyHours/40) * marriageDays * 8;
+    const marriagePay = Math.ceil(marriageHours * hourlyWage);
+    output += `婚假：${marriageDays}天 → ${marriageHours.toFixed(2)} 小時，NT$${marriagePay.toLocaleString()}<br>`;
+    formulas += "婚假薪資 = (平均週工時 ÷ 40) × 假期天數 × 8 × 時薪\n\n";
   }
+
+  // 喪假
+  if(selectedLeaves.includes("funeral")){
+    const funeralDays = 8; // 父母或配偶
+    const funeralHours = (weeklyHours/40) * funeralDays * 8;
+    const funeralPay = Math.ceil(funeralHours * hourlyWage);
+    output += `喪假（父母/配偶）：${funeralDays}天 → ${funeralHours.toFixed(2)} 小時，NT$${funeralPay.toLocaleString()}<br>`;
+    formulas += "喪假薪資 = (平均週工時 ÷ 40) × 假期天數 × 8 × 時薪\n\n";
+  }
+
+  // 病假（示範半薪計算）
+  if(selectedLeaves.includes("sick")){
+    const sickDays = 30;
+    const sickHours = (weeklyHours/40) * sickDays * 8;
+    const sickPay = Math.ceil(sickHours * hourlyWage * 0.5);
+    output += `病假（未住院30日內半薪）：${sickDays}天 → ${sickHours.toFixed(2)} 小時，NT$${sickPay.toLocaleString()}<br>`;
+    formulas += "病假薪資 = (平均週工時 ÷ 40) × 假期天數 × 8 × 時薪 × 0.5\n\n";
+  }
+
+  // 事假
+  if(selectedLeaves.includes("personal")){
+    const personalHours = 112;
+    output += `事假：112 小時，NT$0（依法無給薪）<br>`;
+    formulas += "事假薪資 = 無給薪\n\n";
+  }
+
+  // 產檢假
+  if(selectedLeaves.includes("prenatal")){
+    const prenatalDays = 7;
+    const prenatalHours = (weeklyHours/40) * prenatalDays * 8;
+    const prenatalPay = Math.ceil(prenatalHours * hourlyWage);
+    output += `產檢假：${prenatalDays}天 → ${prenatalHours.toFixed(2)} 小時，NT$${prenatalPay.toLocaleString()}<br>`;
+    formulas += "產檢假薪資 = (平均週工時 ÷ 40) × 假期天數 × 8 × 時薪\n\n";
+  }
+
+  // 陪產假
+  if(selectedLeaves.includes("paternity")){
+    const paternityDays = 7;
+    const paternityHours = (weeklyHours/40) * paternityDays * 8;
+    const paternityPay = Math.ceil(paternityHours * hourlyWage);
+    output += `陪產假：${paternityDays}天 → ${paternityHours.toFixed(2)} 小時，NT$${paternityPay.toLocaleString()}<br>`;
+    formulas += "陪產假薪資 = (平均週工時 ÷ 40) × 假期天數 × 8 × 時薪\n\n";
+  }
+
+  // 生理假
+  if(selectedLeaves.includes("menstrual")){
+    const menstrualPay = Math.ceil(menstrualHours * hourlyWage * 0.5);
+    output += `生理假：1天 → ${menstrualHours.toFixed(2)} 小時，NT$${menstrualPay.toLocaleString()}（半薪）<br>`;
+    formulas += "生理假薪資 = 當日班表時數 × 時薪 × 0.5\n\n";
+  }
+
+  document.getElementById("selectedLeave2").innerText = selectedLeaves.join("、");
+  document.getElementById("results").innerHTML = output;
+  document.getElementById("formulas").innerText = formulas;
+
+  document.getElementById("step1").style.display = "none";
+  document.getElementById("step2").style.display = "none";
+  document.getElementById("step3").style.display = "block";
+}
 </script>
 </body>
 </html>
