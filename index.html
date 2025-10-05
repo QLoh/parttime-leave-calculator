@@ -4,33 +4,69 @@
   <meta charset="UTF-8">
   <title>部分工時假期計算器</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
+    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
     label { display: block; margin-top: 10px; }
     input, select { margin: 5px 0; }
     .result { margin-top: 20px; padding: 10px; border: 1px solid #aaa; }
+    .formula { margin-top: 15px; font-size: 0.9em; color: #444; background: #f9f9f9; padding: 10px; }
   </style>
 </head>
 <body>
   <h2>部分工時假期計算器</h2>
   <form id="calcForm">
-    <label>年資（月數）：<input type="number" id="monthsWorked" value="12"></label>
+    <label>到職日：<input type="date" id="startDate"></label>
+    <label><input type="checkbox" id="hasBreak" onchange="toggleBreak()"> 是否有年資中斷</label>
+    <div id="breakFields" style="display:none;">
+      <label>中斷開始日：<input type="date" id="breakStart"></label>
+      <label>中斷結束日：<input type="date" id="breakEnd"></label>
+    </div>
+
     <label>每月平均實際工時（不含加班）：<input type="number" id="monthlyHours"></label>
     <label>時薪（元）：<input type="number" id="hourlyWage"></label>
     <label>到職是否滿 6 個月？<input type="checkbox" id="overSixMonths" checked></label>
-    <label>產假類型：
-      <select id="maternityType">
-        <option value="56">正常分娩（56天）</option>
-        <option value="28">流產 3 個月以上（28天）</option>
-        <option value="7">流產 2~3 個月（7天）</option>
-        <option value="5">流產未滿 2 個月（5天）</option>
+
+    <label>週工時類型：
+      <select id="workType" onchange="toggleWorkType()">
+        <option value="fixed">固定週工時</option>
+        <option value="variable">非固定（需填前6個月工時總和）</option>
       </select>
     </label>
+    <div id="variableInput" style="display:none;">
+      <label>前6個月總工時：<input type="number" id="sixMonthHours"></label>
+    </div>
+
+    <label>產假類型：
+      <select id="maternityType">
+        <option value="56">正常分娩（56天，全薪或半薪）</option>
+        <option value="28">流產 ≥3個月（28天，半薪）</option>
+        <option value="7">流產 2~3個月（7天，不給薪）</option>
+        <option value="5">流產 <2個月（5天，不給薪）</option>
+      </select>
+    </label>
+
     <button type="button" onclick="calculate()">計算</button>
   </form>
 
   <div class="result" id="output"></div>
 
   <script>
+    function toggleBreak() {
+      document.getElementById("breakFields").style.display =
+        document.getElementById("hasBreak").checked ? "block" : "none";
+    }
+
+    function toggleWorkType() {
+      document.getElementById("variableInput").style.display =
+        document.getElementById("workType").value === "variable" ? "block" : "none";
+    }
+
+    function monthDiff(d1, d2) {
+      let months = (d2.getFullYear() - d1.getFullYear()) * 12;
+      months -= d1.getMonth();
+      months += d2.getMonth();
+      return months <= 0 ? 0 : months;
+    }
+
     function calculateVacationDays(monthsWorked) {
       if (monthsWorked < 6) return 0;
       if (monthsWorked < 12) return 3;
@@ -43,11 +79,22 @@
     }
 
     function calculate() {
-      const monthsWorked = parseInt(document.getElementById("monthsWorked").value);
+      const startDate = new Date(document.getElementById("startDate").value);
+      const today = new Date();
+      let monthsWorked = monthDiff(startDate, today);
+
+      if (document.getElementById("hasBreak").checked) {
+        const breakStart = new Date(document.getElementById("breakStart").value);
+        const breakEnd = new Date(document.getElementById("breakEnd").value);
+        const breakMonths = monthDiff(breakStart, breakEnd);
+        monthsWorked -= breakMonths;
+      }
+
       const monthlyHours = parseFloat(document.getElementById("monthlyHours").value);
       const hourlyWage = parseFloat(document.getElementById("hourlyWage").value);
       const overSixMonths = document.getElementById("overSixMonths").checked;
       const maternityDays = parseInt(document.getElementById("maternityType").value);
+      const workType = document.getElementById("workType").value;
 
       const fullYearHours = 2088;
       const yearHours = monthlyHours * 12;
@@ -55,20 +102,50 @@
       // 特休
       const vacationDays = calculateVacationDays(monthsWorked);
       const vacationHours = (yearHours / fullYearHours) * vacationDays * 8;
-      const vacationPay = vacationHours * hourlyWage;
+      const vacationPay = Math.ceil(vacationHours * hourlyWage);
 
-      // 產假 (週工時估算)
-      const weeklyHours = monthlyHours / 4.33;
+      // 產假
+      let weeklyHours = 0;
+      if (workType === "fixed") {
+        weeklyHours = monthlyHours / 4.33;
+      } else {
+        const sixMonthHours = parseFloat(document.getElementById("sixMonthHours").value);
+        weeklyHours = sixMonthHours / 26;
+      }
+
       const maternityWeeks = maternityDays / 7;
       const maternityHours = weeklyHours * maternityWeeks;
-      let maternityPay = maternityHours * hourlyWage;
-      if (!overSixMonths) maternityPay /= 2;
+      let maternityPay = 0;
+
+      if (maternityDays === 56) {
+        maternityPay = maternityHours * hourlyWage;
+        if (!overSixMonths) maternityPay /= 2;
+      } else if (maternityDays === 28) {
+        maternityPay = (maternityHours * hourlyWage) / 2;
+      } else {
+        maternityPay = 0; // 7天或5天 → 不給薪
+      }
+      maternityPay = Math.ceil(maternityPay);
 
       // 顯示結果
       document.getElementById("output").innerHTML = `
         <h3>計算結果</h3>
-        <p><b>特休假：</b>${vacationDays} 天 → ${vacationHours.toFixed(2)} 小時，約 NT$${vacationPay.toFixed(0)}</p>
-        <p><b>產假：</b>${maternityDays} 天 → ${maternityHours.toFixed(2)} 小時，約 NT$${maternityPay.toFixed(0)}</p>
+        <p><b>年資：</b>${monthsWorked} 個月</p>
+        <p><b>特休假：</b>${vacationDays} 天 → ${vacationHours.toFixed(2)} 小時，NT$${vacationPay}</p>
+        <p><b>產假：</b>${maternityDays} 天 → ${maternityHours.toFixed(2)} 小時，NT$${maternityPay} ${maternityPay===0 ? "（依法無給薪）" : ""}</p>
+
+        <div class="formula">
+          <b>運算公式：</b><br>
+          特休時數 ＝ (實際年工時 ÷ 2088) × 特休天數 × 8<br>
+          特休薪資 ＝ 特休時數 × 時薪<br><br>
+          固定工時：產假工時 ＝ 每週工時 × (假期天數 ÷ 7)<br>
+          非固定工時：產假工時 ＝ (前6個月總工時 ÷ 26) × (假期天數 ÷ 7)<br>
+          產假薪資：<br>
+          - 56天：滿半年全薪；未滿半年半薪<br>
+          - 28天：一律半薪<br>
+          - 7天、5天：依法無給薪<br>
+          ※ 金額最終採「無條件進位」
+        </div>
       `;
     }
   </script>
