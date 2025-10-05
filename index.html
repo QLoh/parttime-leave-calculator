@@ -20,7 +20,13 @@
   <h3>選擇要計算的假別</h3>
   <label><input type="checkbox" id="calcVacation"> 特休假</label><br>
   <label><input type="checkbox" id="calcMaternity"> 產假</label><br>
-  <!-- 未來要加其他假別，就在這裡增加 checkbox -->
+  <label><input type="checkbox" id="calcMarriage"> 婚假</label><br>
+  <label><input type="checkbox" id="calcFuneral"> 喪假</label><br>
+  <label><input type="checkbox" id="calcSick"> 病假</label><br>
+  <label><input type="checkbox" id="calcPersonal"> 事假</label><br>
+  <label><input type="checkbox" id="calcPrenatal"> 產檢假</label><br>
+  <label><input type="checkbox" id="calcPaternity"> 陪產假</label><br>
+  <label><input type="checkbox" id="calcMenstrual"> 生理假</label><br>
   <button onclick="goToPage(2)">下一步</button>
 </div>
 
@@ -68,6 +74,24 @@
     </label>
   </div>
 
+  <!-- 其他假別需要 -->
+  <div id="otherLeaveFields" style="display:none; margin-top:10px;">
+    <h4>其他假別資訊</h4>
+    <label>平均週工時：<input type="number" id="weeklyHoursOther"></label><br>
+    <label>時薪（元）：<input type="number" id="hourlyWageOther"></label><br>
+    <label>生理假當日班表時數：<input type="number" id="menstrualDayHours"></label><br>
+
+    <!-- 喪假親屬關係選單 -->
+    <div id="funeralFields" style="display:none; margin-top:10px;">
+      <h4>喪假親屬關係</h4>
+      <select id="funeralRelation">
+        <option value="8">父母、養父母、繼父母、配偶（8日）</option>
+        <option value="6">祖父母、子女、配偶父母/養父母/繼父母（6日）</option>
+        <option value="3">曾祖父母、兄弟姊妹、配偶祖父母（3日）</option>
+      </select>
+    </div>
+  </div>
+
   <button onclick="goToPage(1)">上一步</button>
   <button onclick="goToPage(3)">計算</button>
 </div>
@@ -80,16 +104,20 @@
 </div>
 
 <script>
-  // 切換頁面
   function goToPage(n) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById("page"+n).classList.add('active');
 
-    if (n===2) { // 進到第二頁，決定哪些欄位要出現
+    if (n===2) {
       document.getElementById("vacationFields").style.display =
         document.getElementById("calcVacation").checked ? "block" : "none";
       document.getElementById("maternityFields").style.display =
         document.getElementById("calcMaternity").checked ? "block" : "none";
+
+      const otherIds = ["calcMarriage","calcFuneral","calcSick","calcPersonal","calcPrenatal","calcPaternity","calcMenstrual"];
+      const showOther = otherIds.some(id => document.getElementById(id).checked);
+      document.getElementById("otherLeaveFields").style.display = showOther ? "block" : "none";
+      document.getElementById("funeralFields").style.display = document.getElementById("calcFuneral").checked ? "block" : "none";
     }
 
     if (n===3) { calculate(); }
@@ -104,15 +132,12 @@
       document.getElementById("workType").value === "variable" ? "block" : "none";
   }
 
-  // 工具：計算天數 & 月數
   function daysBetween(d1, d2) {
     const ms = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate()) - 
                new Date(d1.getFullYear(), d1.getMonth(), d1.getDate());
     return Math.max(0, Math.ceil(ms / (1000*60*60*24)));
   }
   function monthsFromDays(days) { return Math.floor(days / 30); }
-
-  // 特休天數計算
   function calculateVacationDays(monthsWorked) {
     if (monthsWorked < 6) return 0;
     if (monthsWorked < 12) return 3;
@@ -123,8 +148,10 @@
     let extra = Math.floor((monthsWorked - 120) / 12) + 16;
     return Math.min(extra, 30);
   }
+  function formatCurrency(num) {
+    return "NT$" + num.toLocaleString("en-US");
+  }
 
-  // 主計算
   function calculate() {
     const output = document.getElementById("output");
     output.innerHTML = "";
@@ -141,21 +168,22 @@
     const monthsWorked = monthsFromDays(serviceDays);
     output.innerHTML += `<p><b>年資：</b>${monthsWorked} 個月</p>`;
 
-    // 特休計算
+    const weeklyHoursOther = parseFloat(document.getElementById("weeklyHoursOther").value) || 0;
+    const hourlyWageOther  = parseFloat(document.getElementById("hourlyWageOther").value) || 0;
+
+    // 特休
     if (document.getElementById("calcVacation").checked) {
       const monthlyHours = parseFloat(document.getElementById("monthlyHoursVacation").value);
       const hourlyWage   = parseFloat(document.getElementById("hourlyWageVacation").value);
       const fullYearHours = 2088;
       const yearHours = monthlyHours * 12;
-
       const vacationDays = calculateVacationDays(monthsWorked);
       const vacationHours = (yearHours / fullYearHours) * vacationDays * 8;
       const vacationPay   = Math.ceil(vacationHours * hourlyWage);
-
-      output.innerHTML += `<p><b>特休假：</b>${vacationDays} 天 → ${vacationHours.toFixed(2)} 小時，NT$${vacationPay}</p>`;
+      output.innerHTML += `<p><b>特休假：</b>${vacationDays} 天 → ${vacationHours.toFixed(2)} 小時，${formatCurrency(vacationPay)}</p>`;
     }
 
-    // 產假計算
+    // 產假
     if (document.getElementById("calcMaternity").checked) {
       const overSixMonths = document.getElementById("overSixMonths").checked;
       const workType      = document.getElementById("workType").value;
@@ -166,11 +194,7 @@
 
       let weeklyHours = 0;
       if (workType === "fixed") {
-        if (!isNaN(weeklyInput) && weeklyInput > 0) {
-          weeklyHours = weeklyInput;
-        } else {
-          weeklyHours = monthlyHours / 4; // 預設月÷4
-        }
+        weeklyHours = (!isNaN(weeklyInput) && weeklyInput>0) ? weeklyInput : (monthlyHours / 4);
       } else {
         const sixMonthHours = parseFloat(document.getElementById("sixMonthHours").value);
         weeklyHours = sixMonthHours / 26;
@@ -179,33 +203,66 @@
       const maternityWeeks = maternityDays / 7;
       const maternityHours = weeklyHours * maternityWeeks;
       let maternityPay = 0;
-
       if (maternityDays === 56) {
         maternityPay = maternityHours * hourlyWage * (overSixMonths ? 1 : 0.5);
       } else if (maternityDays === 28) {
         maternityPay = maternityHours * hourlyWage * 0.5;
-      } else {
-        maternityPay = 0; // 7天或5天 → 無給薪
       }
       maternityPay = Math.ceil(maternityPay);
-
-      output.innerHTML += `<p><b>產假：</b>${maternityDays} 天 → ${maternityHours.toFixed(2)} 小時，NT$${maternityPay}${maternityPay===0 ? "（依法無給薪）" : ""}</p>`;
+      output.innerHTML += `<p><b>產假：</b>${maternityDays} 天 → ${maternityHours.toFixed(2)} 小時，${maternityPay===0 ? "NT$0（依法無給薪）" : formatCurrency(maternityPay)}</p>`;
     }
 
-    // 公式說明
-    output.innerHTML += `
-      <div class="formula">
-        <b>運算公式：</b><br>
-        特休時數 ＝ (實際年工時 ÷ 2088) × 特休天數 × 8<br>
-        特休薪資 ＝ 特休時數 × 時薪<br><br>
-        固定週工時：產假工時 ＝ 每週工時 × (假期天數 ÷ 7)<br>
-        非固定週工時：產假工時 ＝ (前6個月總工時 ÷ 26) × (假期天數 ÷ 7)<br>
-        產假薪資：<br>
-        - 56天：滿半年全薪；未滿半年半薪<br>
-        - 28天：一律半薪<br>
-        - 7天、5天：依法無給薪<br>
-        ※ 金額最終採「無條件進位」
-      </div>`;
+    // 婚假
+    if (document.getElementById("calcMarriage").checked) {
+      const hours = (weeklyHoursOther/40)*8*8;
+      const pay = Math.ceil(hours*hourlyWageOther);
+      output.innerHTML += `<p><b>婚假：</b>8 日 → ${hours.toFixed(2)} 小時，${formatCurrency(pay)}</p>`;
+    }
+
+    // 喪假（依親屬選項）
+    if (document.getElementById("calcFuneral").checked) {
+      const days = parseInt(document.getElementById("funeralRelation").value);
+      const hours = (weeklyHoursOther/40) * days * 8;
+      const pay = Math.ceil(hours * hourlyWageOther);
+      output.innerHTML += `<p><b>喪假：</b>${days} 日 → ${hours.toFixed(2)} 小時，${formatCurrency(pay)}（全薪）</p>`;
+    }
+
+    // 病假
+    if (document.getElementById("calcSick").checked) {
+      const days = 30;
+      const hours = (weeklyHoursOther/40)*days*8;
+      const pay = Math.ceil(hours*hourlyWageOther*0.5);
+      output.innerHTML += `<p><b>病假：</b>${days} 日 → ${hours.toFixed(2)} 小時，${formatCurrency(pay)}（半薪，未住院30日內）</p>`;
+    }
+
+    // 事假
+    if (document.getElementById("calcPersonal").checked) {
+      const hours = 112;
+      output.innerHTML += `<p><b>事假：</b>112 小時，NT$0（依法無給薪）</p>`;
+    }
+
+    // 產檢假
+    if (document.getElementById("calcPrenatal").checked) {
+      const days = 7;
+      const hours = (weeklyHoursOther/40)*days*8;
+      const pay = Math.ceil(hours*hourlyWageOther);
+      output.innerHTML += `<p><b>產檢假：</b>${days} 日 → ${hours.toFixed(2)} 小時，${formatCurrency(pay)}（全薪）</p>`;
+    }
+
+    // 陪產假
+    if (document.getElementById("calcPaternity").checked) {
+      const days = 7;
+      const hours = (weeklyHoursOther/40)*days*8;
+      const pay = Math.ceil(hours*hourlyWageOther);
+      output.innerHTML += `<p><b>陪產假：</b>${days} 日 → ${hours.toFixed(2)} 小時，${formatCurrency(pay)}（全薪）</p>`;
+    }
+
+    // 生理假
+    if (document.getElementById("calcMenstrual").checked) {
+      const hours = parseFloat(document.getElementById("menstrualDayHours").value);
+      const pay = Math.ceil(hours*hourlyWageOther*0.5);
+      output.innerHTML += `<p><b>生理假：</b>1 日 → ${hours.toFixed(2)} 小時，${formatCurrency(pay)}（半薪）</p>`;
+    }
   }
 </script>
 </body>
