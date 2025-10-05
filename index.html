@@ -5,36 +5,59 @@
   <title>部分工時假期計算器</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-    label { display: block; margin-top: 10px; }
-    input, select { margin: 5px 0; }
+    .page { display: none; }
+    .active { display: block; }
     .result { margin-top: 20px; padding: 10px; border: 1px solid #aaa; }
     .formula { margin-top: 15px; font-size: 0.9em; color: #444; background: #f9f9f9; padding: 10px; }
   </style>
 </head>
 <body>
-  <h2>部分工時假期計算器</h2>
-  <form id="calcForm">
-    <label>到職日：<input type="date" id="startDate"></label>
-    <label><input type="checkbox" id="hasBreak" onchange="toggleBreak()"> 是否有年資中斷</label>
-    <div id="breakFields" style="display:none;">
-      <label>中斷開始日：<input type="date" id="breakStart"></label>
-      <label>中斷結束日：<input type="date" id="breakEnd"></label>
-    </div>
 
-    <label>每月平均實際工時（不含加班）：<input type="number" id="monthlyHours"></label>
-    <label>時薪（元）：<input type="number" id="hourlyWage"></label>
-    <label>到職是否滿 6 個月？<input type="checkbox" id="overSixMonths" checked></label>
+<h2>部分工時假期計算器</h2>
 
+<!-- 第1頁：選擇假別 -->
+<div id="page1" class="page active">
+  <h3>選擇要計算的假別</h3>
+  <label><input type="checkbox" id="calcVacation"> 特休假</label><br>
+  <label><input type="checkbox" id="calcMaternity"> 產假</label><br>
+  <!-- 未來要加其他假別，就在這裡增加 checkbox -->
+  <button onclick="goToPage(2)">下一步</button>
+</div>
+
+<!-- 第2頁：輸入資訊 -->
+<div id="page2" class="page">
+  <h3>輸入資訊</h3>
+  <!-- 年資：共用 -->
+  <label>到職日：<input type="date" id="startDate"></label><br>
+  <label><input type="checkbox" id="hasBreak" onchange="toggleBreak()"> 是否有年資中斷</label>
+  <div id="breakFields" style="display:none;">
+    <label>中斷開始日：<input type="date" id="breakStart"></label>
+    <label>中斷結束日：<input type="date" id="breakEnd"></label>
+  </div>
+
+  <!-- 特休需要 -->
+  <div id="vacationFields" style="display:none; margin-top:10px;">
+    <h4>特休假資訊</h4>
+    <label>每月平均工時（不含加班）：<input type="number" id="monthlyHoursVacation"></label><br>
+    <label>時薪（元）：<input type="number" id="hourlyWageVacation"></label>
+  </div>
+
+  <!-- 產假需要 -->
+  <div id="maternityFields" style="display:none; margin-top:10px;">
+    <h4>產假資訊</h4>
+    <label>是否滿半年？<input type="checkbox" id="overSixMonths" checked></label><br>
     <label>週工時類型：
       <select id="workType" onchange="toggleWorkType()">
-        <option value="fixed">固定週工時</option>
-        <option value="variable">非固定（需填前6個月工時總和）</option>
+        <option value="fixed">固定</option>
+        <option value="variable">非固定</option>
       </select>
-    </label>
+    </label><br>
+    <label>每月工時：<input type="number" id="monthlyHoursMaternity"></label><br>
     <div id="variableInput" style="display:none;">
       <label>前6個月總工時：<input type="number" id="sixMonthHours"></label>
     </div>
-
+    <label>固定週工時（若已知）：<input type="number" id="weeklyHours"></label><br>
+    <label>時薪（元）：<input type="number" id="hourlyWageMaternity"></label><br>
     <label>產假類型：
       <select id="maternityType">
         <option value="56">正常分娩（56天，全薪或半薪）</option>
@@ -43,71 +66,111 @@
         <option value="5">流產 <2個月（5天，不給薪）</option>
       </select>
     </label>
+  </div>
 
-    <button type="button" onclick="calculate()">計算</button>
-  </form>
+  <button onclick="goToPage(1)">上一步</button>
+  <button onclick="goToPage(3)">計算</button>
+</div>
 
-  <div class="result" id="output"></div>
+<!-- 第3頁：結果 -->
+<div id="page3" class="page">
+  <h3>計算結果</h3>
+  <div id="output"></div>
+  <button onclick="goToPage(2)">返回修改</button>
+</div>
 
-  <script>
-    function toggleBreak() {
-      document.getElementById("breakFields").style.display =
-        document.getElementById("hasBreak").checked ? "block" : "none";
+<script>
+  // 切換頁面
+  function goToPage(n) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById("page"+n).classList.add('active');
+
+    if (n===2) { // 進到第二頁，決定哪些欄位要出現
+      document.getElementById("vacationFields").style.display =
+        document.getElementById("calcVacation").checked ? "block" : "none";
+      document.getElementById("maternityFields").style.display =
+        document.getElementById("calcMaternity").checked ? "block" : "none";
     }
 
-    function toggleWorkType() {
-      document.getElementById("variableInput").style.display =
-        document.getElementById("workType").value === "variable" ? "block" : "none";
+    if (n===3) { calculate(); }
+  }
+
+  function toggleBreak() {
+    document.getElementById("breakFields").style.display =
+      document.getElementById("hasBreak").checked ? "block" : "none";
+  }
+  function toggleWorkType() {
+    document.getElementById("variableInput").style.display =
+      document.getElementById("workType").value === "variable" ? "block" : "none";
+  }
+
+  // 工具：計算天數 & 月數
+  function daysBetween(d1, d2) {
+    const ms = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate()) - 
+               new Date(d1.getFullYear(), d1.getMonth(), d1.getDate());
+    return Math.max(0, Math.ceil(ms / (1000*60*60*24)));
+  }
+  function monthsFromDays(days) { return Math.floor(days / 30); }
+
+  // 特休天數計算
+  function calculateVacationDays(monthsWorked) {
+    if (monthsWorked < 6) return 0;
+    if (monthsWorked < 12) return 3;
+    if (monthsWorked < 24) return 7;
+    if (monthsWorked < 36) return 10;
+    if (monthsWorked < 60) return 14;
+    if (monthsWorked < 120) return 15;
+    let extra = Math.floor((monthsWorked - 120) / 12) + 16;
+    return Math.min(extra, 30);
+  }
+
+  // 主計算
+  function calculate() {
+    const output = document.getElementById("output");
+    output.innerHTML = "";
+
+    const startDate = new Date(document.getElementById("startDate").value);
+    const today = new Date();
+    let serviceDays = daysBetween(startDate, today);
+    if (document.getElementById("hasBreak").checked) {
+      const breakStart = new Date(document.getElementById("breakStart").value);
+      const breakEnd   = new Date(document.getElementById("breakEnd").value);
+      const breakDays  = daysBetween(breakStart, breakEnd);
+      serviceDays = Math.max(0, serviceDays - breakDays);
     }
+    const monthsWorked = monthsFromDays(serviceDays);
+    output.innerHTML += `<p><b>年資：</b>${monthsWorked} 個月</p>`;
 
-    function monthDiff(d1, d2) {
-      let months = (d2.getFullYear() - d1.getFullYear()) * 12;
-      months -= d1.getMonth();
-      months += d2.getMonth();
-      return months <= 0 ? 0 : months;
-    }
-
-    function calculateVacationDays(monthsWorked) {
-      if (monthsWorked < 6) return 0;
-      if (monthsWorked < 12) return 3;
-      if (monthsWorked < 24) return 7;
-      if (monthsWorked < 36) return 10;
-      if (monthsWorked < 60) return 14;
-      if (monthsWorked < 120) return 15;
-      let extra = Math.floor((monthsWorked - 120) / 12) + 16;
-      return Math.min(extra, 30);
-    }
-
-    function calculate() {
-      const startDate = new Date(document.getElementById("startDate").value);
-      const today = new Date();
-      let monthsWorked = monthDiff(startDate, today);
-
-      if (document.getElementById("hasBreak").checked) {
-        const breakStart = new Date(document.getElementById("breakStart").value);
-        const breakEnd = new Date(document.getElementById("breakEnd").value);
-        const breakMonths = monthDiff(breakStart, breakEnd);
-        monthsWorked -= breakMonths;
-      }
-
-      const monthlyHours = parseFloat(document.getElementById("monthlyHours").value);
-      const hourlyWage = parseFloat(document.getElementById("hourlyWage").value);
-      const overSixMonths = document.getElementById("overSixMonths").checked;
-      const maternityDays = parseInt(document.getElementById("maternityType").value);
-      const workType = document.getElementById("workType").value;
-
+    // 特休計算
+    if (document.getElementById("calcVacation").checked) {
+      const monthlyHours = parseFloat(document.getElementById("monthlyHoursVacation").value);
+      const hourlyWage   = parseFloat(document.getElementById("hourlyWageVacation").value);
       const fullYearHours = 2088;
       const yearHours = monthlyHours * 12;
 
-      // 特休
       const vacationDays = calculateVacationDays(monthsWorked);
       const vacationHours = (yearHours / fullYearHours) * vacationDays * 8;
-      const vacationPay = Math.ceil(vacationHours * hourlyWage);
+      const vacationPay   = Math.ceil(vacationHours * hourlyWage);
 
-      // 產假
+      output.innerHTML += `<p><b>特休假：</b>${vacationDays} 天 → ${vacationHours.toFixed(2)} 小時，NT$${vacationPay}</p>`;
+    }
+
+    // 產假計算
+    if (document.getElementById("calcMaternity").checked) {
+      const overSixMonths = document.getElementById("overSixMonths").checked;
+      const workType      = document.getElementById("workType").value;
+      const monthlyHours  = parseFloat(document.getElementById("monthlyHoursMaternity").value);
+      const weeklyInput   = parseFloat(document.getElementById("weeklyHours").value);
+      const hourlyWage    = parseFloat(document.getElementById("hourlyWageMaternity").value);
+      const maternityDays = parseInt(document.getElementById("maternityType").value);
+
       let weeklyHours = 0;
       if (workType === "fixed") {
-        weeklyHours = monthlyHours / 4.33;
+        if (!isNaN(weeklyInput) && weeklyInput > 0) {
+          weeklyHours = weeklyInput;
+        } else {
+          weeklyHours = monthlyHours / 4; // 預設月÷4
+        }
       } else {
         const sixMonthHours = parseFloat(document.getElementById("sixMonthHours").value);
         weeklyHours = sixMonthHours / 26;
@@ -118,36 +181,32 @@
       let maternityPay = 0;
 
       if (maternityDays === 56) {
-        maternityPay = maternityHours * hourlyWage;
-        if (!overSixMonths) maternityPay /= 2;
+        maternityPay = maternityHours * hourlyWage * (overSixMonths ? 1 : 0.5);
       } else if (maternityDays === 28) {
-        maternityPay = (maternityHours * hourlyWage) / 2;
+        maternityPay = maternityHours * hourlyWage * 0.5;
       } else {
-        maternityPay = 0; // 7天或5天 → 不給薪
+        maternityPay = 0; // 7天或5天 → 無給薪
       }
       maternityPay = Math.ceil(maternityPay);
 
-      // 顯示結果
-      document.getElementById("output").innerHTML = `
-        <h3>計算結果</h3>
-        <p><b>年資：</b>${monthsWorked} 個月</p>
-        <p><b>特休假：</b>${vacationDays} 天 → ${vacationHours.toFixed(2)} 小時，NT$${vacationPay}</p>
-        <p><b>產假：</b>${maternityDays} 天 → ${maternityHours.toFixed(2)} 小時，NT$${maternityPay} ${maternityPay===0 ? "（依法無給薪）" : ""}</p>
-
-        <div class="formula">
-          <b>運算公式：</b><br>
-          特休時數 ＝ (實際年工時 ÷ 2088) × 特休天數 × 8<br>
-          特休薪資 ＝ 特休時數 × 時薪<br><br>
-          固定工時：產假工時 ＝ 每週工時 × (假期天數 ÷ 7)<br>
-          非固定工時：產假工時 ＝ (前6個月總工時 ÷ 26) × (假期天數 ÷ 7)<br>
-          產假薪資：<br>
-          - 56天：滿半年全薪；未滿半年半薪<br>
-          - 28天：一律半薪<br>
-          - 7天、5天：依法無給薪<br>
-          ※ 金額最終採「無條件進位」
-        </div>
-      `;
+      output.innerHTML += `<p><b>產假：</b>${maternityDays} 天 → ${maternityHours.toFixed(2)} 小時，NT$${maternityPay}${maternityPay===0 ? "（依法無給薪）" : ""}</p>`;
     }
-  </script>
+
+    // 公式說明
+    output.innerHTML += `
+      <div class="formula">
+        <b>運算公式：</b><br>
+        特休時數 ＝ (實際年工時 ÷ 2088) × 特休天數 × 8<br>
+        特休薪資 ＝ 特休時數 × 時薪<br><br>
+        固定週工時：產假工時 ＝ 每週工時 × (假期天數 ÷ 7)<br>
+        非固定週工時：產假工時 ＝ (前6個月總工時 ÷ 26) × (假期天數 ÷ 7)<br>
+        產假薪資：<br>
+        - 56天：滿半年全薪；未滿半年半薪<br>
+        - 28天：一律半薪<br>
+        - 7天、5天：依法無給薪<br>
+        ※ 金額最終採「無條件進位」
+      </div>`;
+  }
+</script>
 </body>
 </html>
