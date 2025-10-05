@@ -11,6 +11,8 @@
     .formula { margin-top: 15px; font-size: 0.9em; color: #444; background: #f9f9f9; padding: 10px; }
     .btn { margin-top: 15px; padding: 6px 12px; border: none; background: #007acc; color: #fff; cursor: pointer; border-radius: 4px; }
     .btn:hover { background: #005f99; }
+    .step { font-weight: bold; margin-bottom: 10px; color: #007acc; }
+    .box { margin:10px 0; padding:10px; background:#f0f0f0; border:1px solid #ccc; }
   </style>
 </head>
 <body>
@@ -19,7 +21,7 @@
 
 <!-- 第1頁 -->
 <div id="page1" class="page active">
-  <h3>選擇要計算的假別</h3>
+  <div class="step">Step 1：選擇要計算的假別</div>
   <label><input type="checkbox" id="calcVacation"> 特休假</label><br>
   <label><input type="checkbox" id="calcMaternity"> 產假</label><br>
   <label><input type="checkbox" id="calcMarriage"> 婚假</label><br>
@@ -34,8 +36,9 @@
 
 <!-- 第2頁 -->
 <div id="page2" class="page">
-  <h3>輸入資訊</h3>
-  <div id="selectedLeaves" style="margin:10px 0; padding:10px; background:#f0f0f0; border:1px solid #ccc;">
+  <div class="step">Step 2：輸入必要資訊</div>
+
+  <div id="selectedLeaves" class="box">
     <b>已選假別：</b> <span id="selectedLeavesList"></span>
   </div>
 
@@ -47,7 +50,40 @@
     <label>中斷結束日：<input type="date" id="breakEnd"></label>
   </div>
 
-  <!-- 其他欄位略（保持和之前版本相同） -->
+  <div id="vacationFields" style="display:none;">
+    <h4>特休假資訊</h4>
+    <label>每月平均工時（不含加班）：<input type="number" id="monthlyHoursVacation"></label><br>
+    <label>時薪（元）：<input type="number" id="hourlyWageVacation"></label><br>
+  </div>
+
+  <div id="maternityFields" style="display:none;">
+    <h4>產假資訊</h4>
+    <label>週工時型態：
+      <select id="weeklyType">
+        <option value="fixed">固定週工時</option>
+        <option value="nonfixed">非固定週工時</option>
+      </select>
+    </label><br>
+    <label>平均週工時：<input type="number" id="weeklyHoursMaternity"></label><br>
+    <label>前6個月總工時（非固定才需要）：<input type="number" id="sixMonthHours"></label><br>
+    <label>時薪（元）：<input type="number" id="hourlyWageMaternity"></label><br>
+    <label><input type="checkbox" id="overSixMonths"> 到職是否滿6個月？</label><br>
+  </div>
+
+  <div id="otherLeaveFields" style="display:none;">
+    <h4>其他假別資訊</h4>
+    <label>平均週工時：<input type="number" id="weeklyHoursOther"></label><br>
+    <label>時薪（元）：<input type="number" id="hourlyWageOther"></label><br>
+    <label>生理假當日班表時數：<input type="number" id="menstrualDayHours"></label><br>
+    <div id="funeralFields" style="display:none;">
+      <h4>喪假親屬關係</h4>
+      <select id="funeralRelation">
+        <option value="8">父母、養父母、繼父母、配偶（8日）</option>
+        <option value="6">祖父母、子女、配偶父母/養父母/繼父母（6日）</option>
+        <option value="3">曾祖父母、兄弟姊妹、配偶祖父母（3日）</option>
+      </select>
+    </div>
+  </div>
 
   <button onclick="goToPage(1)">上一步</button>
   <button onclick="goToPage(3)">計算</button>
@@ -55,7 +91,7 @@
 
 <!-- 第3頁 -->
 <div id="page3" class="page">
-  <h3>計算結果</h3>
+  <div class="step">Step 3：計算結果</div>
   <div id="output"></div>
   <button class="btn" onclick="copyResult()">複製結果</button><br>
   <button onclick="goToPage(2)">返回修改</button>
@@ -71,42 +107,65 @@
 
   function updateSelectedLeaves() {
     const names = [];
-    ["calcVacation","calcMaternity","calcMarriage","calcFuneral","calcSick","calcPersonal","calcPrenatal","calcPaternity","calcMenstrual"]
-      .forEach(id => { if(document.getElementById(id).checked) names.push(document.querySelector("label[for='"+id+"']")?.innerText || document.getElementById(id).parentNode.innerText); });
+    if (document.getElementById("calcVacation").checked) names.push("特休假");
+    if (document.getElementById("calcMaternity").checked) names.push("產假");
+    if (document.getElementById("calcMarriage").checked) names.push("婚假");
+    if (document.getElementById("calcFuneral").checked) names.push("喪假");
+    if (document.getElementById("calcSick").checked) names.push("病假");
+    if (document.getElementById("calcPersonal").checked) names.push("事假");
+    if (document.getElementById("calcPrenatal").checked) names.push("產檢假");
+    if (document.getElementById("calcPaternity").checked) names.push("陪產假");
+    if (document.getElementById("calcMenstrual").checked) names.push("生理假");
     document.getElementById("selectedLeavesList").innerText = names.join("、");
+    document.getElementById("vacationFields").style.display = document.getElementById("calcVacation").checked ? "block" : "none";
+    document.getElementById("maternityFields").style.display = document.getElementById("calcMaternity").checked ? "block" : "none";
+    const otherIds = ["calcMarriage","calcFuneral","calcSick","calcPersonal","calcPrenatal","calcPaternity","calcMenstrual"];
+    const showOther = otherIds.some(id => document.getElementById(id).checked);
+    document.getElementById("otherLeaveFields").style.display = showOther ? "block" : "none";
+    document.getElementById("funeralFields").style.display = document.getElementById("calcFuneral").checked ? "block" : "none";
   }
 
   function toggleBreak() {
     document.getElementById("breakFields").style.display = document.getElementById("hasBreak").checked ? "block" : "none";
   }
 
+  function formatCurrency(num) {
+    return "NT$" + num.toLocaleString("en-US", {maximumFractionDigits:0});
+  }
+
   function copyResult() {
     const text = document.getElementById("output").innerText;
     navigator.clipboard.writeText(text).then(() => {
       alert("已複製到剪貼簿！");
-    }).catch(() => {
-      alert("複製失敗，請手動選取文字。");
     });
   }
 
   function calculate() {
     const output = document.getElementById("output");
-    output.innerHTML = `
-      <p><b>年資：</b>（這裡是計算的數字…）</p>
-      <p>特休假：7天 → 32.18 小時，NT$6,566</p>
-      <p>產假：56天 → 184.76 小時，NT$37,691</p>
-      <div class="formula">
-        <b>運算公式：</b><br>
-        特休假時數 ＝ (實際年工時 ÷ 2088) × 特休天數 × 8<br>
-        特休假薪資 ＝ 特休時數 × 時薪<br><br>
-        產假工時：<br>
-        固定週工時＝每週工時 × (假期天數 ÷ 7)<br>
-        非固定週工時＝(前6個月總工時 ÷ 26) × (假期天數 ÷ 7)<br>
-        產假薪資：依規定比例發給<br>
-        其他假別工時 ＝ (平均週工時 ÷ 40) × 請假日數 × 8<br>
-        生理假薪資 ＝ 當日班表時數 × 時薪 × 0.5
-      </div>
-    `;
+    output.innerHTML = "";
+
+    // 已選假別
+    const selected = document.getElementById("selectedLeavesList").innerText;
+    output.innerHTML += `<div class="box"><b>已選假別：</b> ${selected}</div>`;
+
+    // 模擬結果（這裡你可替換為實際計算邏輯）
+    if (document.getElementById("calcVacation").checked) {
+      output.innerHTML += `<p>特休假：7天 → 32.18 小時，${formatCurrency(6566)}</p>`;
+    }
+    if (document.getElementById("calcMaternity").checked) {
+      output.innerHTML += `<p>產假：56天 → 184.76 小時，${formatCurrency(37691)}</p>`;
+    }
+
+    // 顯示對應公式
+    let formulaHTML = "<div class='formula'><b>運算公式：</b><br>";
+    if (document.getElementById("calcVacation").checked) {
+      formulaHTML += "特休假時數 ＝ (實際年工時 ÷ 2088) × 特休天數 × 8<br>特休假薪資 ＝ 特休時數 × 時薪<br><br>";
+    }
+    if (document.getElementById("calcMaternity").checked) {
+      formulaHTML += "產假工時：固定週工時 或 前6月平均工時 × (假期天數 ÷ 7)<br>產假薪資：依規定比例發給（全薪/半薪/無給薪）<br><br>";
+    }
+    formulaHTML += "</div>";
+    output.innerHTML += formulaHTML;
   }
 </script>
 </body>
