@@ -148,51 +148,62 @@ function goStep3(){
   const weekHours = parseFloat(document.getElementById("weekHours").value)||0;
   const menstrualHours = parseFloat(document.getElementById("menstrualHours").value)||0;
 
-  let output = "已選假別：" + selected.map(c=>translate(c)).join("、") + "<br><br>";
+  let resultsText = "已選假別：" + selected.map(c=>translate(c)).join("、") + "<br><br>";
+  let formulaText = "";
+
   selected.forEach(type=>{
     if(type==="vacation"){
       const hours = 32.18;
-      output += `特休假：7天 → ${hours.toFixed(2)} 小時，NT$${(hours*wage).toLocaleString()}<br>`;
-      output += "公式：特休假時數 = (實際年工時 ÷ 2088) × 特休天數 × 8<br><br>";
+      resultsText += `特休假：7天 → ${hours.toFixed(2)} 小時，NT$${(hours*wage).toLocaleString()}<br>`;
+      formulaText += "特休假時數 = (實際年工時 ÷ 2088) × 特休天數 × 8<br>";
     }
     if(type==="maternity"){
-      const hours = weekHours*8*7; // 簡化版
-      output += `產假：56天 → ${hours.toFixed(2)} 小時，NT$${(hours*wage).toLocaleString()}<br>`;
-      output += "公式：平均週工時 ÷ 40 × 假期天數 × 8<br><br>";
+      const hours = weekHours/40*56*8;
+      resultsText += `產假：56天 → ${hours.toFixed(2)} 小時，NT$${(hours*wage).toLocaleString()}<br>`;
+      formulaText += "產假工時 = 平均週工時 ÷ 40 × 假期天數 × 8<br>";
     }
     if(type==="menstrual"){
       const hours = menstrualHours;
-      output += `生理假：1天 → ${hours.toFixed(2)} 小時，NT$${(hours*wage*0.5).toLocaleString()} （半薪）<br>`;
-      output += "公式：當日班表時數 × 時薪 × 0.5<br><br>";
+      resultsText += `生理假：1天 → ${hours.toFixed(2)} 小時，NT$${(hours*wage*0.5).toLocaleString()} （半薪）<br>`;
+      formulaText += "生理假薪資 = 當日班表時數 × 時薪 × 0.5<br>";
     }
     if(type==="marriage"){
       const hours = weekHours/40*8*8;
-      output += `婚假：8天 → ${hours.toFixed(2)} 小時，NT$${(hours*wage).toLocaleString()}<br>`;
-      output += "公式：平均週工時 ÷ 40 × 8天 × 8<br><br>";
+      resultsText += `婚假：8天 → ${hours.toFixed(2)} 小時，NT$${(hours*wage).toLocaleString()}<br>`;
+      formulaText += "婚假工時 = 平均週工時 ÷ 40 × 8天 × 8<br>";
     }
     if(type==="funeral"){
       const hours = weekHours/40*8*8;
-      output += `喪假：8天 → ${hours.toFixed(2)} 小時，NT$${(hours*wage).toLocaleString()}<br>`;
-      output += "公式：平均週工時 ÷ 40 × 假期天數 × 8<br><br>";
+      resultsText += `喪假：8天 → ${hours.toFixed(2)} 小時，NT$${(hours*wage).toLocaleString()}<br>`;
+      formulaText += "喪假工時 = 平均週工時 ÷ 40 × 假期天數 × 8<br>";
     }
     if(type==="sick"){
-      const hours = weekHours/40*8*30;
-      output += `病假：30天 → ${hours.toFixed(2)} 小時，NT$${(hours*wage*0.5).toLocaleString()} （半薪）<br>`;
-      output += "公式：平均週工時 ÷ 40 × 30天 × 8 × 0.5<br><br>";
+      const hours = weekHours/40*30*8;
+      resultsText += `病假：30天 → ${hours.toFixed(2)} 小時，NT$${(hours*wage*0.5).toLocaleString()} （半薪）<br>`;
+      formulaText += "病假工時 = 平均週工時 ÷ 40 × 30天 × 8 × 0.5<br>";
     }
     if(type==="personal"){
       const hours = weekHours/40*112;
-      output += `事假：112小時 → ${hours.toFixed(2)} 小時，NT$0 （無薪）<br>`;
-      output += "公式：平均週工時 ÷ 40 × 112小時<br><br>";
+      resultsText += `事假：112小時 → ${hours.toFixed(2)} 小時，NT$0 （無薪）<br>`;
+      formulaText += "事假工時 = 平均週工時 ÷ 40 × 112小時<br>";
     }
   });
 
-  document.getElementById("results").innerHTML = output;
+  document.getElementById("results").innerHTML = resultsText;
+  document.getElementById("formulas").innerHTML = formulaText;
   document.getElementById("step1").style.display="none";
   document.getElementById("step2").style.display="none";
   document.getElementById("step3").style.display="block";
   incrementCounter(3);
 }
+
+function copyAll(){
+  const text = document.getElementById("results").innerText + "\n\n公式：\n" + document.getElementById("formulas").innerText;
+  navigator.clipboard.writeText(text).then(()=>{
+    alert("已複製到剪貼簿！");
+  });
+}
+
 
 function translate(code){
   switch(code){
