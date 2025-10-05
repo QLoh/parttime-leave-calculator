@@ -62,6 +62,10 @@
       border-top: 1px solid #ddd;
       padding-top: 10px;
     }
+    .copy-btn {
+      background: #666;
+      margin-left: 10px;
+    }
   </style>
 </head>
 <body>
@@ -111,7 +115,9 @@
   <div id="step3" class="card" style="display:none;">
     <div class="step-title">Step 3：計算結果</div>
     <div id="results" class="results"></div>
+    <div id="formulas" class="results"></div>
     <button onclick="goStep2()">上一步</button>
+    <button class="copy-btn" onclick="copyAll()">複製全部</button>
     <div class="footer">
       水山子研究室<br>
       Email: sarraaagoole@gmail.com<br>
@@ -149,7 +155,7 @@ function goStep3(){
   const menstrualHours = parseFloat(document.getElementById("menstrualHours").value)||0;
 
   let resultsText = "已選假別：" + selected.map(c=>translate(c)).join("、") + "<br><br>";
-  let formulaText = "";
+  let formulaText = "<strong>運算公式：</strong><br>";
 
   selected.forEach(type=>{
     if(type==="vacation"){
@@ -203,7 +209,6 @@ function copyAll(){
     alert("已複製到剪貼簿！");
   });
 }
-
 
 function translate(code){
   switch(code){
