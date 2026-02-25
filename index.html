@@ -299,26 +299,35 @@ function goStep3() {
   let resultHTML = "";
   let formulaHTML = "<strong>運算公式說明：</strong><br>";
 
-  selectedLeaves.forEach(type => {
+ selectedLeaves.forEach(type => {
     // === A. 特休假 ===
     if (type === "vacation") {
-      let ftDays = 0;
-      if (seniority >= 0.5 && seniority < 1) ftDays = 3;
-      else if (seniority >= 1 && seniority < 2) ftDays = 7;
-      else if (seniority >= 2 && seniority < 3) ftDays = 10;
-      else if (seniority >= 3 && seniority < 5) ftDays = 14;
-      else if (seniority >= 5 && seniority < 10) ftDays = 15;
-      else if (seniority >= 10) ftDays = 15 + (Math.floor(seniority) - 10);
-      if (ftDays > 30) ftDays = 30;
+        let ftDays = 0;
+        let baseHours = 2088; // 預設年度基準
 
-      let hours = (annualHours / 2088) * ftDays * 8;
-      
-      resultHTML += `<p><strong>【特休假】</strong><br>
-        全時應給 ${ftDays} 天，依比例折算為 <b>${hours.toFixed(2)} 小時</b>。<br>
-        若全部折現，應發金額：NT$${Math.round(hours * wage)}</p>`;
-      
-      formulaHTML += `‣ 特休時數 = (全年實際工時${annualHours} ÷ 2088) × 全時天數${ftDays} × 8<br>`;
+        // 必須用大括號把 ftDays 和 baseHours 包在一起
+        if (seniority >= 0.5 && seniority < 1) {
+            ftDays = 3;
+            baseHours = 1044; 
+        } 
+        else if (seniority >= 1 && seniority < 2) ftDays = 7;
+        else if (seniority >= 2 && seniority < 3) ftDays = 10;
+        else if (seniority >= 3 && seniority < 5) ftDays = 14;
+        else if (seniority >= 5 && seniority < 10) ftDays = 15;
+        else if (seniority >= 10) ftDays = 15 + (Math.floor(seniority) - 10);
+        
+        if (ftDays > 30) ftDays = 30;
+
+        let hours = (annualHours / baseHours) * ftDays * 8;
+        
+        resultHTML += `<p><strong>【特休假】</strong><br>
+            全時應給 ${ftDays} 天 (基準 ${baseHours}hr)，依比例折算為 <b>${hours.toFixed(2)} 小時</b>。<br>
+            若全部折現，應發金額：NT$${Math.round(hours * wage)}</p>`;
+        
+        // 將 2088 改為變數 ${baseHours}
+        formulaHTML += `‣ 特休時數 = (全年實際工時${annualHours} ÷ ${baseHours}) × 全時天數${ftDays} × 8<br>`;
     }
+});
 
     // === B. 產假 (8週) - 修正邏輯 ===
     if (type === "maternity") {
