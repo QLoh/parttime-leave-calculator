@@ -1,283 +1,3 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>部分工時假期計算器</title>
-  <style>
-    body {
-      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-      background: #f4f6f8;
-      color: #333;
-      line-height: 1.6;
-      padding: 20px;
-      margin: 0;
-    }
-    h1 {
-      text-align: center;
-      color: #2c3e50;
-      margin-bottom: 30px;
-    }
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 25px;
-      max-width: 600px;
-      margin: 0 auto;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-    .step-title {
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 20px;
-      color: #2c3e50;
-      border-bottom: 2px solid #eee;
-      padding-bottom: 10px;
-    }
-    .leave-group {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .leave-option {
-      display: flex;
-      align-items: center;
-      background: #f9f9f9;
-      padding: 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .leave-option:hover {
-      background: #e9ecef;
-    }
-    .leave-option input {
-      margin-right: 10px;
-      transform: scale(1.2);
-    }
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-      font-size: 14px;
-      color: #555;
-    }
-    input[type="number"], input[type="text"] {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      box-sizing: border-box;
-      font-size: 16px;
-    }
-    .btn-group {
-      display: flex;
-      gap: 10px;
-      margin-top: 25px;
-    }
-    button {
-      flex: 1;
-      background: #2c3e50;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 12px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    button.secondary {
-      background: #95a5a6;
-    }
-    button:hover {
-      background: #1a252f;
-    }
-    button.secondary:hover {
-      background: #7f8c8d;
-    }
-    .results {
-      background: #e8f4f8;
-      padding: 15px;
-      border-radius: 8px;
-      border-left: 5px solid #3498db;
-      margin-bottom: 15px;
-    }
-    .formulas {
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 8px;
-      font-size: 13px;
-      color: #666;
-      border: 1px solid #eee;
-    }
-    .footer {
-      margin-top: 40px;
-      font-size: 13px;
-      text-align: center;
-      color: #999;
-    }
-    /* 動態顯示區域 */
-    .input-section {
-      display: none;
-      border-top: 1px dashed #ddd;
-      margin-top: 15px;
-      padding-top: 10px;
-    }
-    .input-section.active {
-      display: block;
-    }
-    /* 特別樣式：產假勾選框 */
-    .checkbox-container {
-      display: flex;
-      align-items: center;
-      margin-top: 10px;
-      background: #fff0f6;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #fcc2d7;
-    }
-    .checkbox-container input {
-      width: auto;
-      margin-right: 10px;
-      transform: scale(1.3);
-    }
-  </style>
-</head>
-<body>
-
-  <h1>部分工時假期計算器</h1>
-
-  <div id="step1" class="card">
-    <div class="step-title">Step 1：選擇要計算的假別</div>
-    <div class="leave-group">
-      <label class="leave-option"><input type="checkbox" value="vacation"> 特休假</label>
-      <label class="leave-option"><input type="checkbox" value="maternity"> 產假</label>
-      <label class="leave-option"><input type="checkbox" value="menstrual"> 生理假</label>
-      <label class="leave-option"><input type="checkbox" value="marriage"> 婚假</label>
-      <label class="leave-option"><input type="checkbox" value="funeral"> 喪假</label>
-      <label class="leave-option"><input type="checkbox" value="sick"> 病假</label>
-      <label class="leave-option"><input type="checkbox" value="personal"> 事假</label>
-    </div>
-    <div class="btn-group">
-      <button onclick="goStep2()">下一步</button>
-    </div>
-  </div>
-
-  <div id="step2" class="card" style="display:none;">
-    <div class="step-title">Step 2：輸入必要資訊</div>
-    <div id="selected-list" style="color: #3498db; font-weight: bold; margin-bottom: 10px;"></div>
-
-    <label>時薪 (Hourly Wage)</label>
-    <input type="number" id="wage" value="190" placeholder="例如：190">
-
-    <label>平均每週工時 (Average Weekly Hours)</label>
-    <input type="number" id="weekHours" value="20" placeholder="例如：20">
-
-    <div id="input-maternity" class="input-section">
-      <label style="color:#c0392b;">【產假專用】年資確認</label>
-      <div class="checkbox-container">
-        <input type="checkbox" id="maternitySeniority" checked>
-        <span style="font-weight:bold; color:#c0392b;">年資已滿 6 個月 (打勾=全薪，未勾=半薪)</span>
-      </div>
-    </div>
-
-    <div id="input-vacation" class="input-section">
-      <label style="color:#e67e22;">【特休專用】年資 (年)</label>
-      <input type="number" id="seniority" value="1" step="0.5">
-      <label style="color:#e67e22;">【特休專用】前一年度(或區間)實際總工時</label>
-      <input type="number" id="annualHours" value="1000" placeholder="例如：1000">
-    </div>
-
-    <div id="input-days" class="input-section">
-      <label style="color:#27ae60;">【婚/喪/病假專用】法規給予天數 (例如婚假8天、喪假3（曾祖、手足）、6（祖、子女）、8天（父母）)</label>
-      <input type="number" id="legalDays" value="8">
-    </div>
-
-    <div id="input-shift" class="input-section">
-      <label style="color:#8e44ad;">【生理假/排班專用】當日預排時數</label>
-      <input type="number" id="shiftHours" value="4">
-    </div>
-
-    <div class="btn-group">
-      <button class="secondary" onclick="goStep1()">上一步</button>
-      <button onclick="goStep3()">開始計算</button>
-    </div>
-  </div>
-
-  <div id="step3" class="card" style="display:none;">
-    <div class="step-title">Step 3：計算結果</div>
-    <div id="results" class="results"></div>
-    <div id="formulas" class="formulas"></div>
-    
-    <div class="btn-group">
-      <button class="secondary" onclick="goStep2()">返回修改</button>
-      <button onclick="copyAll()">複製結果</button>
-    </div>
-  </div>
-
-  <div class="footer">
-    © 2026 水山子研究室<br>
-  </div>
-
-<script>
-let selectedLeaves = [];
-
-// 假別名稱對照
-const leaveNames = {
-  vacation: "特休假",
-  maternity: "產假",
-  menstrual: "生理假",
-  marriage: "婚假",
-  funeral: "喪假",
-  sick: "病假",
-  personal: "事假"
-};
-
-// 進入 Step 2
-function goStep2() {
-  selectedLeaves = [];
-  document.querySelectorAll('#step1 input:checked').forEach(cb => {
-    selectedLeaves.push(cb.value);
-  });
-
-  if (selectedLeaves.length === 0) {
-    alert("請至少選擇一個假別！");
-    return;
-  }
-
-  // 顯示 Step 2
-  document.getElementById("step1").style.display = "none";
-  document.getElementById("step2").style.display = "block";
-  document.getElementById("step3").style.display = "none";
-
-  // 更新 Step 2 標題與動態欄位
-  document.getElementById("selected-list").innerText = "已選：" + selectedLeaves.map(k => leaveNames[k]).join("、");
-
-  // 重置動態欄位顯示
-  document.querySelectorAll('.input-section').forEach(el => el.classList.remove('active'));
-
-  // 根據選擇顯示對應欄位
-  if (selectedLeaves.includes('vacation')) {
-    document.getElementById('input-vacation').classList.add('active');
-  }
-  if (selectedLeaves.includes('maternity')) {
-    document.getElementById('input-maternity').classList.add('active');
-  }
-  if (selectedLeaves.some(r => ['marriage', 'funeral', 'sick', 'personal'].includes(r))) {
-    document.getElementById('input-days').classList.add('active');
-  }
-  if (selectedLeaves.includes('menstrual')) {
-    document.getElementById('input-shift').classList.add('active');
-  }
-}
-
-// 返回 Step 1
-function goStep1() {
-  document.getElementById("step1").style.display = "block";
-  document.getElementById("step2").style.display = "none";
-}
-
 // 執行計算
 function goStep3() {
   const wage = parseFloat(document.getElementById("wage").value) || 0;
@@ -299,13 +19,14 @@ function goStep3() {
   let resultHTML = "";
   let formulaHTML = "<strong>運算公式說明：</strong><br>";
 
- selectedLeaves.forEach(type => {
+  // 這裡是重點：所有假別判斷都要在同一個 forEach 裡面
+  selectedLeaves.forEach(type => {
+    
     // === A. 特休假 ===
     if (type === "vacation") {
         let ftDays = 0;
-        let baseHours = 2088; // 預設年度基準
+        let baseHours = 2088; 
 
-        // 必須用大括號把 ftDays 和 baseHours 包在一起
         if (seniority >= 0.5 && seniority < 1) {
             ftDays = 3;
             baseHours = 1044; 
@@ -321,27 +42,23 @@ function goStep3() {
         let hours = (annualHours / baseHours) * ftDays * 8;
         
         resultHTML += `<p><strong>【特休假】</strong><br>
-            全時應給 ${ftDays} 天 (基準 ${baseHours}hr)，依比例折算為 <b>${hours.toFixed(2)} 小時</b>。<br>
+            全時基準：${ftDays} 天 (對應基數 ${baseHours}hr)<br>
+            比例折算：<b>${hours.toFixed(2)} 小時</b>。<br>
             若全部折現，應發金額：NT$${Math.round(hours * wage)}</p>`;
         
-        // 將 2088 改為變數 ${baseHours}
-        formulaHTML += `‣ 特休時數 = (全年實際工時${annualHours} ÷ ${baseHours}) × 全時天數${ftDays} × 8<br>`;
+        formulaHTML += `‣ 特休時數 = (實際工時 ${annualHours} ÷ 基準 ${baseHours}) × 天數 ${ftDays} × 8<br>`;
     }
-});
 
-    // === B. 產假 (8週) - 修正邏輯 ===
+    // === B. 產假 (8週) ===
     if (type === "maternity") {
       let payHours = weekHours * 8; 
-      // 根據勾選判斷倍率
       let rate = isMaternityFull ? 1.0 : 0.5;
       let rateText = isMaternityFull ? "全薪" : "半薪 (年資未滿半年)";
-      
       let salary = payHours * wage * rate;
 
       resultHTML += `<p><strong>【產假 (8週)】</strong><br>
-        薪資計算時數基準為 <b>${payHours.toFixed(2)} 小時</b>。<br>
-        適用費率：<b>${rateText}</b><br>
-        預估總薪資：NT$${Math.round(salary)}</p>`;
+        薪資基準為 <b>${payHours.toFixed(2)} 小時</b> (${rateText})。<br>
+        預估薪資：NT$${Math.round(salary)}</p>`;
         
       formulaHTML += `‣ 產假薪資 = (平均週工時${weekHours} × 8週) × 時薪 × ${rate}<br>`;
     }
@@ -368,12 +85,12 @@ function goStep3() {
       let money = ratioHours * wage * payRate;
 
       resultHTML += `<p><strong>【${name}】</strong><br>
-        以法規 ${legalDays} 天計算，依比例折算為 <b>${ratioHours.toFixed(2)} 小時</b>。<br>
+        依比例折算為 <b>${ratioHours.toFixed(2)} 小時</b>。<br>
         應發薪資 (${rateName})：NT$${Math.round(money)}</p>`;
       
       formulaHTML += `‣ ${name}時數 = (週工時${weekHours} ÷ 40) × 天數${legalDays} × 8<br>`;
     }
-  });
+  }); // 所有的 if 判斷都結束後，才在這裡結束 forEach
 
   document.getElementById("results").innerHTML = resultHTML;
   document.getElementById("formulas").innerHTML = formulaHTML;
@@ -381,19 +98,3 @@ function goStep3() {
   document.getElementById("step2").style.display = "none";
   document.getElementById("step3").style.display = "block";
 }
-
-// 複製功能
-function copyAll() {
-  const t1 = document.getElementById("results").innerText;
-  const t2 = document.getElementById("formulas").innerText;
-  const text = `--- 部分工時薪資計算結果 ---\n\n${t1}\n\n${t2}`;
-  
-  navigator.clipboard.writeText(text).then(() => {
-    alert("已複製結果到剪貼簿！");
-  }).catch(err => {
-    alert("複製失敗，請手動複製。");
-  });
-}
-</script>
-</body>
-</html>
